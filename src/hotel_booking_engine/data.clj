@@ -107,9 +107,10 @@
   "Update a Room in the database"
   [id room]
   (validate [id ::ObjectId])
-  (let [new-room (modified-now room)]
+  (let [old-room (get-room id)
+        new-room (merge old-room (dissoc (modified-now room) :_id))]
     (validate [new-room ::Room])
-    (if (acknowledged? (collection/update-by-id mongo-db (mongo-options :rooms-collection) id new-room))
+    (if (acknowledged? (collection/update-by-id mongo-db (mongo-options :rooms-collection) (ObjectId. id) new-room))
       new-room
       (throw+ {:type ::failed} "Update Failed"))))
 
