@@ -9,13 +9,13 @@
       (is (string? url))
       (is (= "http://localhost:8080"))))
   (testing "Create basic URL"
-    (let [url (url-from {:server-name "localhost" :server-port "8080" :uri "/api/doits"})]
+    (let [url (url-from {:server-name "localhost" :server-port "8080" :uri "/api/rooms"})]
       (is (string? url))
-      (is (= "http://localhost:8080/api/doits/50e64dd544ae5146ffbb8acf"))))
+      (is (= "http://localhost:8080/api/rooms/50e64dd544ae5146ffbb8acf"))))
   (testing "Create basic URL"
-    (let [url (url-from {:server-name "localhost" :server-port "8080" :uri "/api/doits"} "50e64dd544ae5146ffbb8acf" "field")]
+    (let [url (url-from {:server-name "localhost" :server-port "8080" :uri "/api/rooms"} "50e64dd544ae5146ffbb8acf" "field")]
       (is (string? url))
-      (is (= "http://localhost:8080/api/doits/50e64dd544ae5146ffbb8acf/field")))))
+      (is (= "http://localhost:8080/api/rooms/50e64dd544ae5146ffbb8acf/field")))))
 
 (deftest test-http-options
   (testing "HTTP Options Default Response"
@@ -63,15 +63,15 @@
 
 (deftest test-http-created
   (testing "Create with location"
-    (let [response (created (url-from (request :post "/api/doits") "50e64dd544ae5146ffbb8acf"))
+    (let [response (created (url-from (request :post "/api/rooms") "50e64dd544ae5146ffbb8acf"))
           location (get-in response [:headers "location"])]
       (is (= (response :status) 201))
-      (is (= location "http://localhost:80/api/doits/50e64dd544ae5146ffbb8acf"))
+      (is (= location "http://localhost:80/api/rooms/50e64dd544ae5146ffbb8acf"))
       (is (nil? (response :body)))))
   (testing "Create with location & body"
-    (let [response (created (url-from (request :post "/api/doits") "50e64dd544ae5146ffbb8acf") {:title "test"})
+    (let [response (created (url-from (request :post "/api/rooms") "50e64dd544ae5146ffbb8acf") {:title "test"})
           location (get-in response [:headers "location"])
           body (response :body)]
       (is (= (response :status) 201))
-      (is (= location "http://localhost:80/api/doits/50e64dd544ae5146ffbb8acf"))
+      (is (= location "http://localhost:80/api/rooms/50e64dd544ae5146ffbb8acf"))
       (is (map? body)))))

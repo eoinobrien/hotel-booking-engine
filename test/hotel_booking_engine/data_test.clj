@@ -12,51 +12,90 @@
 (use-fixtures :once mongo-connection)
 
 (deftest test-validation
-  (testing "Valid DoIt ID"
+  (testing "Valid Room ID"
     (is (nil? (validate ["532d14c35f6cacc494ee47bc" :hotel-booking-engine.data/ObjectId]))))
-  (testing "Invalid DoIt ID"
+  (testing "Invalid Room ID"
     (is (thrown+? [:type :hotel-booking-engine.data/invalid] (validate ["123456789" :hotel-booking-engine.data/ObjectId]))))
-  (testing "Valid DoIt"
-    (is (nil? (validate [(created-now (modified-now (with-oid {:title "Testing, 123"}))) :hotel-booking-engine.data/DoIt]))))
-  (testing "Invalid DoIt"
-    (is (thrown+? [:type :hotel-booking-engine.data/invalid] (validate [{:title "Testing, 123"} :hotel-booking-engine.data/DoIt])))))
+  (testing "Valid Room"
+    (is (nil? (validate [(created-now (modified-now (with-oid {:title "Get Test Room"
+                                                               :num_occupants 1
+                                                               :base_rate 20
+                                                               :num_rooms 1})))
+                         :hotel-booking-engine.data/Room]))))
+  (testing "Invalid Room"
+    (is (thrown+? [:type :hotel-booking-engine.data/invalid] (validate [{:title "Get Test Room"
+                                                                         :num_occupants 1
+                                                                         :base_rate 20
+                                                                         :num_rooms 1}
+                                                                        :hotel-booking-engine.data/Room])))))
 
-(deftest test-create-doit
-  (testing "Create Valid DoIt"
-    (let [doit {:title "Newly Created Test DoIt"
-                :description "A New Test DoIt"
-                :due (time/plus (time/now) (time/weeks 2))
-                :priority 1}
-          created (create-doit doit)]
+(deftest test-create-room
+  (testing "Create Valid Room"
+    (let [room {:title "Newly Created Test Room"
+                :num_occupants 1
+                :base_rate 20
+                :num_rooms 1}
+          created (create-room room)]
       (is (map? created))
       (is (contains? created :_id))
       (is (contains? created :title))
-      (is (contains? created :description))
-      (is (contains? created :due))
-      (is (contains? created :priority))
+      (is (contains? created :num_occupants))
+      (is (contains? created :base_rate))
+      (is (contains? created :num_rooms))
       (is (contains? created :created))
       (is (contains? created :modified))))
-  (testing "Create Invalid DoIt"
-    (is (thrown+? [:type :hotel-booking-engine.data/invalid] (create-doit {})))))
+  (testing "Create Invalid Room"
+    (is (thrown+? [:type :hotel-booking-engine.data/invalid] (create-room {})))))
 
-(deftest test-get-doit
-  (testing "Get valid doit"
-    (let [created (create-doit {:title "Get Test DoIt"})
-          doit (get-doit (.toString (created :_id)))]
-      (is (map? doit))
+(deftest test-get-room
+  (testing "Get valid room"
+    (let [created (create-room {:title "Get Test Room"
+                                :num_occupants 1
+                                :base_rate 20
+                                :num_rooms 1})
+          room (get-room (.toString (created :_id)))]
+      (is (map? room))
+      (is (contains? room :_id))
+      (is (contains? room :title))
+      (is (contains? room :num_occupants))
+      (is (contains? room :base_rate))
+      (is (contains? room :num_rooms))
+      (is (contains? room :created))
+      (is (contains? room :modified))))
+  (testing "Get with invalid ID"
+    (is (thrown+? [:type :hotel-booking-engine.data/invalid] (get-room "123456789"))))
+  (testing "Get non-existent Room"
+    (is (thrown+? [:type :hotel-booking-engine.data/not-found] (get-room "532d14c35f6cacc494ee47bc")))))
+
+(deftest test-update-room
+  (testing "Update Valid Room"
+    (let [room {:title "Newly Updated Test Room"
+                :num_occupants 1
+                :base_rate 20
+                :num_rooms 1
+                :_id "532d14c35f6cacc494efd321"}
+          created (update-room (:_id room) room)]
+      (is (map? created))
       (is (contains? created :_id))
       (is (contains? created :title))
+      (is (contains? created :num_occupants))
+      (is (contains? created :base_rate))
+      (is (contains? created :num_rooms))
       (is (contains? created :created))
       (is (contains? created :modified))))
-  (testing "Get with invalid ID"
-    (is (thrown+? [:type :hotel-booking-engine.data/invalid] (get-doit "123456789"))))
-  (testing "Get non-existent DoIt"
-    (is (thrown+? [:type :hotel-booking-engine.data/not-found] (get-doit "532d14c35f6cacc494ee47bc")))))
+  (testing "Update Empty Room"
+    (is (thrown+? [:type :hotel-booking-engine.data/invalid] (update-room "532d14c35f6cacc494efd321" {}))))
+  (testing "Update Room with invalid ID"
+    (is (thrown+? [:type :hotel-booking-engine.data/invalid] (update-room "123456789" {:title "Newly Updated Test Room"
+                                                                                       :num_occupants 1
+                                                                                       :base_rate 20
+                                                                                       :num_rooms 1
+                                                                                       :_id "123456789"})))))
 
-(deftest test-delete-doit
-  (testing "Delete doit"
-    (let [created (create-doit {:title "Delete Test DoIt"})
-          deleted (delete-doit (.toString (created :_id)))]
+(deftest test-delete-room
+  (testing "Delete room"
+    (let [created (create-room {:title "Delete Test Room"})
+          deleted (delete-room (.toString (created :_id)))]
       (is (not (nil? deleted)))))
   (testing "Delete with invalid ID"
-    (is (thrown+? [:type :hotel-booking-engine.data/invalid] (delete-doit "123456789")))))
+    (is (thrown+? [:type :hotel-booking-engine.data/invalid] (delete-room "123456789")))))

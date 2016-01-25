@@ -5,6 +5,8 @@
             [monger.result :refer [acknowledged?]]
             [monger.util :as util]
             [monger.joda-time]
+            [taoensso.timbre :refer [debug warn]]
+            [clojure.pprint :refer [pprint]]
             [validateur.validation :refer [presence-of
                                            valid? validation-set]]
             [slingshot.slingshot :refer [throw+]])
@@ -18,7 +20,7 @@
   {:host             "localhost"
    :port             27017
    :db               "booking"
-   :doits-collection "doits"})
+   :rooms-collection "rooms"})
 
 (let [mongo-client (connect mongo-options)]
   (def mongo-db (get-db mongo-client (mongo-options :db))))
@@ -28,19 +30,19 @@
 ;;
 
 (defn with-oid
-  "Add a new Object ID to a DoIt"
-  [doit]
-  (assoc doit :_id (util/object-id)))
+  "Add a new Object ID to a Room"
+  [room]
+  (assoc room :_id (util/object-id)))
 
 (defn created-now
-  "Set the created time in a DoIt to the current time"
-  [doit]
-  (assoc doit :created (time/now)))
+  "Set the created time in a Room to the current time"
+  [room]
+  (assoc room :created (time/now)))
 
 (defn modified-now
-  "Set the modified time in a DoIt to the current time"
-  [doit]
-  (assoc doit :modified (time/now)))
+  "Set the modified time in a Room to the current time"
+  [room]
+  (assoc room :modified (time/now)))
 
 ;;
 ;; Validation Functions
@@ -57,14 +59,17 @@
             (re-matches #"[0-9a-f]{24}" id))
     (throw+ {:type ::invalid} "Invalid ID")))
 
-(defmethod validate* ::DoIt
-  [doit _]
+(defmethod validate* ::Room
+  [room _]
   (if-not (valid? (validation-set
                     (presence-of :_id)
                     (presence-of :title)
+                    (presence-of :num_rooms)
+                    (presence-of :base_rate)
+                    (presence-of :num_occupants)
                     (presence-of :created)
-                    (presence-of :modified)) doit)
-    (throw+ {:type ::invalid} "Invalid DoIt")))
+                    (presence-of :modified)) room)
+    (throw+ {:type ::invalid} "Invalid Room")))
 
 (defn validate
   "Execute a sequence of validation tests"
@@ -75,29 +80,44 @@
 ;; DB Access Functions
 ;;
 
-(defn create-doit
-  "Insert a DoIt into the database"
-  [doit]
-  (let [new-doit (created-now (modified-now (with-oid doit)))]
-    (validate [new-doit ::DoIt])
-    (if (acknowledged? (collection/insert mongo-db (mongo-options :doits-collection) new-doit))
-      new-doit
+(defn get-rooms
+  "Get all Rooms"
+  []
+  (collection/find-maps mongo-db (mongo-options :rooms-collection)))
+
+(defn create-room
+  "Insert a Room into the database"
+  [room]
+  (let [new-room (created-now (modified-now (with-oid room)))]
+    (validate [new-room ::Room])
+    (if (acknowledged? (collection/insert mongo-db (mongo-options :rooms-collection) new-room))
+      new-room
       (throw+ {:type ::failed} "Create Failed"))))
 
-(defn get-doit
-  "Fetch a DoIt by ID"
+(defn get-room
+  "Fetch a Room by ID"
   [id]
   (validate [id ::ObjectId])
-  (let [doit (collection/find-map-by-id mongo-db (mongo-options :doits-collection) (ObjectId. id))]
-    (if (nil? doit)
+  (let [room (collection/find-map-by-id mongo-db (mongo-options :rooms-collection) (ObjectId. id))]
+    (if (nil? room)
       (throw+ {:type ::not-found} (str id " not found"))
-      doit)))
+      room)))
 
-(defn delete-doit
-  "Delete a DoIt by ID"
+(defn update-room
+  "Update a Room in the database"
+  [id room]
+  (validate [id ::ObjectId])
+  (let [new-room (modified-now room)]
+    (validate [new-room ::Room])
+    (if (acknowledged? (collection/update-by-id mongo-db (mongo-options :rooms-collection) id new-room))
+      new-room
+      (throw+ {:type ::failed} "Update Failed"))))
+
+(defn delete-room
+  "Delete a Room by ID"
   [id]
   (validate [id ::ObjectId])
-  (let [doit (get-doit id)]
-    (if (acknowledged? (collection/remove-by-id mongo-db (mongo-options :doits-collection) (ObjectId. id)))
-      doit
+  (let [room (get-room id)]
+    (if (acknowledged? (collection/remove-by-id mongo-db (mongo-options :rooms-collection) (ObjectId. id)))
+      room
       (throw+ {:type ::failed} "Delete Failed"))))

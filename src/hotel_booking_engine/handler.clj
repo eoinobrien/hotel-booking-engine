@@ -25,21 +25,23 @@
                (http/options [:options] {:version "0.1.0-SNAPSHOT"}))
              (ANY "/" []
                (http/method-not-allowed [:options]))
-             (context "/doits" []
+             (context "/rooms" []
                (GET "/" []
-                 (http/not-implemented))
+                 (http/ok (data/get-rooms)))
                (GET "/:id" [id]
-                 (http/ok (data/get-doit id)))
+                 (http/ok (data/get-room id)))
                (HEAD "/:id" [id]
                  (http/not-implemented))
                (POST "/" [:as req]
-                 (let [doit (data/create-doit (keywordize-keys (req :body)))
-                       location (http/url-from req (str (doit :_id)))]
-                   (http/created location doit)))
-               (PUT "/:id" [id]
-                 (data/delete-doit id))
+                 (let [room (data/create-room (keywordize-keys (req :body)))
+                       location (http/url-from req (str (room :_id)))]
+                   (http/created location room)))
+               (PUT "/:id" [id :as req]
+                 (let [room (data/update-room id (keywordize-keys (req :body)))
+                       location (http/url-from req (str (room :_id)))]
+                   (http/created location room)))
                (DELETE "/:id" [id]
-                 (http/ok (data/delete-doit id)))
+                 (http/ok (data/delete-room id)))
                (OPTIONS "/" []
                  (http/options [:options :get :head :put :post :delete]))
                (ANY "/" []
