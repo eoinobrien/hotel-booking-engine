@@ -12,18 +12,21 @@
             [slingshot.slingshot :refer [throw+]])
   (:import (org.bson.types ObjectId)))
 
+(def mongo-db (atom {}))
+
 ;;
 ;; Database Connection Details
 ;;
 
 (def mongo-options
-  {:host             "localhost"
-   :port             27017
-   :db               "booking"
-   :rooms-collection "rooms"})
+  {:host                "localhost"
+   :port                27017
+   :db                  "booking"
+   :rooms-collection    "rooms"
+   :bookings-collection "bookings"})
 
 (let [mongo-client (connect mongo-options)]
-  (def mongo-db (get-db mongo-client (mongo-options :db))))
+  (reset! mongo-db (get-db mongo-client (mongo-options :db))))
 
 ;;
 ;; Utility Functions
@@ -71,26 +74,41 @@
                     (presence-of :modified)) room)
     (throw+ {:type ::invalid} "Invalid Room")))
 
+(defmethod validate* ::Booking
+  [booking _]
+  (if-not (valid? (validation-set
+                    (presence-of :_id)
+                    (presence-of [:customer :name])
+                    (presence-of [:customer :email])
+                    (presence-of :rooms)
+                    (presence-of :checkin_date)
+                    (presence-of :checkout_date)
+                    (presence-of :num_people)
+                    (presence-of :amount)
+                    (presence-of :created)
+                    (presence-of :modified)) booking)
+    (throw+ {:type ::invalid} "Invalid Booking")))
+
 (defn validate
   "Execute a sequence of validation tests"
   [& tests]
   (doseq [test tests] (apply validate* test)))
 
 ;;
-;; DB Access Functions
+;; Rooms
 ;;
 
 (defn get-rooms
   "Get all Rooms"
   []
-  (collection/find-maps mongo-db (mongo-options :rooms-collection)))
+  (collection/find-maps @mongo-db (mongo-options :rooms-collection)))
 
 (defn create-room
   "Insert a Room into the database"
   [room]
   (let [new-room (created-now (modified-now (with-oid room)))]
     (validate [new-room ::Room])
-    (if (acknowledged? (collection/insert mongo-db (mongo-options :rooms-collection) new-room))
+    (if (acknowledged? (collection/insert @mongo-db (mongo-options :rooms-collection) new-room))
       new-room
       (throw+ {:type ::failed} "Create Failed"))))
 
@@ -98,7 +116,7 @@
   "Fetch a Room by ID"
   [id]
   (validate [id ::ObjectId])
-  (let [room (collection/find-map-by-id mongo-db (mongo-options :rooms-collection) (ObjectId. id))]
+  (let [room (collection/find-map-by-id @mongo-db (mongo-options :rooms-collection) (ObjectId. id))]
     (if (nil? room)
       (throw+ {:type ::not-found} (str id " not found"))
       room)))
@@ -110,7 +128,7 @@
   (let [old-room (get-room id)
         new-room (merge old-room (dissoc (modified-now room) :_id))]
     (validate [new-room ::Room])
-    (if (acknowledged? (collection/update-by-id mongo-db (mongo-options :rooms-collection) (ObjectId. id) new-room))
+    (if (acknowledged? (collection/update-by-id @mongo-db (mongo-options :rooms-collection) (ObjectId. id) new-room))
       new-room
       (throw+ {:type ::failed} "Update Failed"))))
 
@@ -119,6 +137,41 @@
   [id]
   (validate [id ::ObjectId])
   (let [room (get-room id)]
-    (if (acknowledged? (collection/remove-by-id mongo-db (mongo-options :rooms-collection) (ObjectId. id)))
+    (if (acknowledged? (collection/remove-by-id @mongo-db (mongo-options :rooms-collection) (ObjectId. id)))
       room
       (throw+ {:type ::failed} "Delete Failed"))))
+
+
+;;
+;; Bookings
+;;
+
+(defn create-booking
+  "Insert a Booking into the database"
+  [booking]
+  (let [new-booking (created-now (modified-now (with-oid booking)))]
+    (validate [new-booking ::Booking])
+    (if (acknowledged? (collection/insert @mongo-db (mongo-options :bookings-collection) new-booking))
+      new-booking
+      (throw+ {:type ::failed} "Create Failed"))))
+
+(defn get-booking
+  "Fetch a Booking by ID"
+  [id]
+  (validate [id ::ObjectId])
+  (let [booking (collection/find-map-by-id @mongo-db (mongo-options :bookings-collection) (ObjectId. id))]
+    (if (nil? booking)
+      (throw+ {:type ::not-found} (str id " not found"))
+      booking)))
+
+(defn update-booking
+  "Update a Booking in the database"
+  [id booking]
+  (validate [id ::ObjectId])
+  (let [old-booking (get-booking id)
+        new-booking (merge old-booking (dissoc (modified-now booking) :_id))]
+    (validate [new-booking ::Booking])
+    (if (acknowledged? (collection/update-by-id @mongo-db (mongo-options :bookings-collection) (ObjectId. id) new-booking))
+      new-booking
+      (throw+ {:type ::failed} "Update Failed"))))
+

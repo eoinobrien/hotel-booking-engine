@@ -45,7 +45,18 @@
                (OPTIONS "/" []
                  (http/options [:options :get :head :put :post :delete]))
                (ANY "/" []
-                 (http/method-not-allowed [:options :get :head :put :post :delete]))))
+                 (http/method-not-allowed [:options :get :head :put :post :delete])))
+             (context "/book" []
+               (GET "/" []
+                 (http/ok (data/get-rooms)))
+               (POST "/" [:as req]
+                 (let [booking (data/create-booking (keywordize-keys (req :body)))
+                       location (http/url-from req (str (booking :_id)))]
+                   (http/created location booking)))
+               (OPTIONS "/" []
+                 (http/options [:options :get :post]))
+               (ANY "/" []
+                 (http/method-not-allowed [:options :get :post]))))
            (route/not-found "Nothing to see here, move along now"))
 
 (def app
