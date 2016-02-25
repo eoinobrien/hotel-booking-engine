@@ -22,9 +22,9 @@
     (let [response (api-routes
                      (-> (request :post "/api/rooms")
                          (assoc :body {:title "Test Room"
-                                       :num_occupants 1
-                                       :base_rate 20
-                                       :num_rooms 1})))
+                                       :num-occupants 1
+                                       :base-rate 20
+                                       :num-rooms 1})))
           response-body (response :body)
           response-headers (response :headers)]
       (is (= (response :status) 201))
@@ -41,9 +41,9 @@
     (let [response (api-routes
                      (-> (request :post "/api/rooms")
                          (assoc :body {:title "Test Room"
-                                       :num_occupants 1
-                                       :base_rate 20
-                                       :num_rooms 1})))
+                                       :num-occupants 1
+                                       :base-rate 20
+                                       :num-rooms 1})))
           id (.toString (:_id (response :body)))]
       (is (= (response :status) 201))
       (let [response (api-routes (request :get (str "/api/rooms/" id)))
@@ -67,9 +67,9 @@
     (let [response (api-routes
                      (-> (request :post "/api/rooms")
                          (assoc :body {:title "Test Room"
-                                       :num_occupants 1
-                                       :base_rate 20
-                                       :num_rooms 1})))
+                                       :num-occupants 1
+                                       :base-rate 20
+                                       :num-rooms 1})))
           id (.toString (:_id (response :body)))]
       (is (= (response :status) 201))
       (let [response (api-routes (request :delete (str "/api/rooms/" id)))
